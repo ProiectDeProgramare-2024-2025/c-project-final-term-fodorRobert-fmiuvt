@@ -26,6 +26,7 @@ typedef struct {
     int rooms;
     int bathrooms;
     int parking;
+    char date[20];
     char desc[LINE_BUF];
 } Listing;
 
@@ -51,9 +52,24 @@ void get_string(const char* prompt, char* dest, int size) {
     dest[strcspn(dest, "\n")] = 0;
 }
 
+int validate_date_format(const char* date) {
+    if (strlen(date) != 10) return 0;
+    if (date[2] != '/' || date[5] != '/') return 0;
+    for (int i = 0; i < 10; i++) {
+        if (i == 2 || i == 5) continue;
+        if (!isdigit(date[i])) return 0;
+    }
+    return 1;
+}
+
 void add_listing() {
     Listing l;
     printf(CYAN "\n-- Add New Listing --\n" RESET);
+    get_string("Date of acquisition (dd/mm/yyyy): ", l.date, sizeof(l.date));
+    if (!validate_date_format(l.date)) {
+        printf(RED "Invalid date format! Expected dd/mm/yyyy.\n" RESET);
+        return;
+    }
     l.id = get_int("ID: ");
     l.price = get_int("Price: ");
     l.size = get_int("Size: ");
@@ -64,7 +80,8 @@ void add_listing() {
 
     FILE* f = fopen(LISTING_FILE, "a");
     if (!f) { perror("Error opening file"); return; }
-    fprintf(f, "%d,%d,%d,%d,%d,%d,%s\n", l.id, l.price, l.size, l.rooms, l.bathrooms, l.parking, l.desc);
+    fprintf(f, "%d,%d,%d,%d,%d,%d,%s,%s\n",
+            l.id, l.price, l.size, l.rooms, l.bathrooms, l.parking, l.date, l.desc);
     fclose(f);
     printf(GREEN "Listing saved successfully!\n" RESET);
 }
@@ -76,14 +93,14 @@ void view_listings() {
     printf(CYAN "\n-- Current Listings --\n" RESET);
     while (fgets(line, sizeof(line), f)) {
         Listing l;
-        sscanf(line, "%d,%d,%d,%d,%d,%d,%[^\n]",
+        sscanf(line, "%d,%d,%d,%d,%d,%d,%19[^,],%255[^\n]",
                &l.id, &l.price, &l.size, &l.rooms,
-               &l.bathrooms, &l.parking, l.desc);
-        printf("ID: %s%d%s | Price: %s%d%s | Size: %d sqm | Rooms: %d | Baths: %d | Parking: %s | %s\n",
+               &l.bathrooms, &l.parking, l.date, l.desc);
+        printf("ID: %s%d%s | Price: %s%d%s | Size: %d sqm | Rooms: %d | Baths: %d | Parking: %s | Date: %s | %s\n",
                CYAN, l.id, RESET,
                GREEN, l.price, RESET,
                l.size, l.rooms, l.bathrooms,
-               l.parking ? "Yes" : "No", l.desc);
+               l.parking ? "Yes" : "No", l.date, l.desc);
     }
     fclose(f);
 }
